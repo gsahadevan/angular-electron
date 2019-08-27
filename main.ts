@@ -63,7 +63,7 @@ function readFiles(dirname, onFileContent, onError) {
       return;
     }
     filenames.forEach(function(filename) {
-      fs.readFile(dirname + '\\' + filename, 'utf-8', function(err, content) {
+      fs.readFile(dirname + '/' + filename, 'utf-8', function(err, content) {
         if (err) {
           onError(err);
           return;
@@ -86,9 +86,9 @@ function onFileContent(filename, content) {
     rainFall.date = rainData[0];
     rainFall.latitude = rainData[1];
     rainFall.longitude = rainData[2];
-    rainFall.temperatureMin = rainData[3];
-    rainFall.temperatureMax = rainData[4];
-    rainFall.temperatureAvg = rainData[5];
+    rainFall.solarRadiation = rainData[3];
+    rainFall.temperatureMin = rainData[4];
+    rainFall.temperatureMax = rainData[5];
     rainFall.rainfall = rainData[6];
     rainFall.windspeed = rainData[7];
     rainFall.relativeHumidity = rainData[8];
