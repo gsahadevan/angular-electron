@@ -50,7 +50,6 @@ function createWindow() {
 }
 
 const fs = require("fs");
-let rainfallList = new Array();
 
 ipcMain.on("file-location-read", (event, messages) => {
   readFiles(messages, onFileContent, onError);
@@ -79,6 +78,9 @@ function onError(err) {
 }
 
 function onFileContent(filename, content) {
+
+  const rainfallList: any = [];
+
   const lines = content.split("\r\n");
   lines.forEach(item => {
     const rainData = item.split("  ");
@@ -97,8 +99,9 @@ function onFileContent(filename, content) {
   });
 
   // console.log(rainfallList);
-  calculateMonthly();
-  calculateWeekly();
+  calculateMonthly(filename, rainfallList);
+  calculateWeekly(filename, rainfallList);
+  console.log(filename);
 }
 
 /*
@@ -117,7 +120,7 @@ function calculateMonthly() {
 }
 */
 
-function calculateMonthly() {
+function calculateMonthly(filename: string, rainfallList: any) {
     const weeklyData: any = [];
     let sumSolarRadiation = 0;
     let sumTemperatureMin = 0;
@@ -201,10 +204,10 @@ function calculateMonthly() {
 
   // console.log(weeklyData);
 
-  writeToCSV(weeklyData, './monthly_' + year + '.csv');
+  writeToCSV(weeklyData, './' + filename + '_monthly.csv');
 }
 
-function calculateWeekly() {
+function calculateWeekly(filename: string, rainfallList: any) {
     const weeklyData: any = [];
     let sumSolarRadiation = 0;
     let sumTemperatureMin = 0;
@@ -261,7 +264,7 @@ function calculateWeekly() {
   });
   */
 
-  writeToCSV(weeklyData, './weekly_' + year + '.csv');
+  writeToCSV(weeklyData, './' + filename + '_weekly.csv');
 }
 
 function writeToCSV(contents: any, filename: string) {
@@ -282,7 +285,7 @@ function writeToFile(filename, content) {
     if (err) {
       return console.log(err);
     }
-    console.log("The file was saved!");
+    console.log(filename + ' is saved');
   });
 }
 /*
