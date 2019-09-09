@@ -1,10 +1,10 @@
-import { app, BrowserWindow, screen, ipcMain } from "electron";
-import * as path from "path";
-import * as url from "url";
+import { app, BrowserWindow, screen, ipcMain } from 'electron';
+import * as path from 'path';
+import * as url from 'url';
 
 let win, serve;
 const args = process.argv.slice(1);
-serve = args.some(val => val === "--serve");
+serve = args.some(val => val === '--serve');
 
 function createWindow() {
   const electronScreen = screen;
@@ -22,26 +22,28 @@ function createWindow() {
   });
 
   if (serve) {
-    require("electron-reload")(__dirname, {
+    require('electron-reload')(__dirname, {
       electron: require(`${__dirname}/node_modules/electron`)
     });
-    win.loadURL("http://localhost:4200");
+    win.loadURL('http://localhost:4200');
   } else {
     win.loadURL(
       url.format({
-        pathname: path.join(__dirname, "dist/index.html"),
-        protocol: "file:",
+        pathname: path.join(__dirname, 'dist/index.html'),
+        protocol: 'file:',
         slashes: true
       })
     );
   }
 
+  /*
   if (serve) {
     win.webContents.openDevTools();
   }
+  */
 
   // Emitted when the window is closed.
-  win.on("closed", () => {
+  win.on('closed', () => {
     // Dereference the window object, usually you would store window
     // in an array if your app supports multi windows, this is the time
     // when you should delete the corresponding element.
@@ -49,20 +51,20 @@ function createWindow() {
   });
 }
 
-const fs = require("fs");
+const fs = require('fs');
 
-ipcMain.on("file-location-read", (event, messages) => {
-  readFiles(messages, onFileContent, onError);
+ipcMain.on('file-location-read', (event, messages) => {
+  readFiles(messages);
 });
 
-function readFiles(dirname, onFileContent, onError) {
+function readFiles(dirname) {
   fs.readdir(dirname, function(err, filenames) {
     if (err) {
       onError(err);
       return;
     }
-    filenames.forEach(function(filename) {
-      fs.readFile(dirname + "/" + filename, "utf-8", function(err, content) {
+    filenames.forEach((filename: string) => {
+      fs.readFile(dirname + '/' + filename, 'utf-8', function(err, content: any) {
         if (err) {
           onError(err);
           return;
@@ -80,10 +82,9 @@ function onError(err) {
 function onFileContent(filename, content) {
 
   const rainfallList: any = [];
-
-  const lines = content.split("\r\n");
+  const lines = content.split('\r\n');
   lines.forEach(item => {
-    const rainData = item.split("  ");
+    const rainData = item.split('  ');
     const rainFall: any = {};
     rainFall.date = rainData[0];
     rainFall.latitude = rainData[1];
@@ -98,29 +99,13 @@ function onFileContent(filename, content) {
     rainfallList.push(rainFall);
   });
 
-  // console.log(rainfallList);
-  calculateMonthly(filename, rainfallList);
-  calculateWeekly(filename, rainfallList);
-  console.log(filename);
+  const isAvgRequired = false;
+
+  calculateMonthly(filename, rainfallList, isAvgRequired);
+  calculateWeekly(filename, rainfallList, isAvgRequired);
 }
 
-/*
-function calculateMonthly() {
-  let monthlyAvg: any = {};
-  let monthWiseSplit = rainfallList.reduce((res, obj) => {
-    // let year = obj.date.substring(0, 4);
-    let month = obj.date.substring(4, 6);
-    // let day = obj.date.substring(6, 8);
-
-    res[month] = res[month] || [];
-    res[month].push(obj);
-    return res;
-  }, {});
-  console.log(Object.values(monthWiseSplit));
-}
-*/
-
-function calculateMonthly(filename: string, rainfallList: any) {
+function calculateMonthly(filename: string, rainfallList: any, isAvgRequired: boolean) {
     const weeklyData: any = [];
     let sumSolarRadiation = 0;
     let sumTemperatureMin = 0;
@@ -135,31 +120,48 @@ function calculateMonthly(filename: string, rainfallList: any) {
 
     const year = rainfallList[0].date.substring(0, 4);
 
-  for (let i = 0; i < rainfallList.length; i++) {
-    sumSolarRadiation += rainfallList[i].solarRadiation;
-    sumTemperatureMax += rainfallList[i].temperatureMax;
-    sumTemperatureMin += rainfallList[i].temperatureMin;
-    sumRainfall += rainfallList[i].rainfall;
-    sumWindspeed += rainfallList[i].windspeed;
-    sumRelativeHumidity += rainfallList[i].relativeHumidity;
+    for (let i = 0; i < rainfallList.length; i++) {
+        sumSolarRadiation += rainfallList[i].solarRadiation;
+        sumTemperatureMax += rainfallList[i].temperatureMax;
+        sumTemperatureMin += rainfallList[i].temperatureMin;
+        sumRainfall += rainfallList[i].rainfall;
+        sumWindspeed += rainfallList[i].windspeed;
+        sumRelativeHumidity += rainfallList[i].relativeHumidity;
 
-    numberOfDays++;
+        numberOfDays++;
 
-    if ((i + 1) < rainfallList.length) {
-        nextMonth = rainfallList[i + 1].date.substring(0, 6);
-        if (nextMonth !== currMonth) {
+        let consolidateData = false;
+
+        if ((i + 1) < rainfallList.length) {
+            nextMonth = rainfallList[i + 1].date.substring(0, 6);
+            if (nextMonth !== currMonth) {
+                consolidateData = true;
+            }
+        } else {
+            consolidateData = true;
+        }
+
+        if (consolidateData) {
             const tempWeeklyData: any = {};
             tempWeeklyData.month = currMonth;
-            // tempWeeklyData.weekDay = rainfallList[i].date;
             tempWeeklyData.latitude = rainfallList[i].latitude;
             tempWeeklyData.longitude = rainfallList[i].longitude;
 
-            tempWeeklyData.solarRadiation = (sumSolarRadiation / numberOfDays).toFixed(2);
-            tempWeeklyData.temperatureMax = (sumTemperatureMax / numberOfDays).toFixed(2);
-            tempWeeklyData.temperatureMin = (sumTemperatureMin / numberOfDays).toFixed(2);
-            tempWeeklyData.rainfall = (sumRainfall / numberOfDays).toFixed(2);
-            tempWeeklyData.windspeed = (sumWindspeed / numberOfDays).toFixed(2);
-            tempWeeklyData.relativeHumidity = (sumRelativeHumidity / numberOfDays).toFixed(2);
+            if (isAvgRequired) {
+                tempWeeklyData.solarRadiation = (sumSolarRadiation / numberOfDays).toFixed(2);
+                tempWeeklyData.temperatureMax = (sumTemperatureMax / numberOfDays).toFixed(2);
+                tempWeeklyData.temperatureMin = (sumTemperatureMin / numberOfDays).toFixed(2);
+                tempWeeklyData.rainfall = (sumRainfall / numberOfDays).toFixed(2);
+                tempWeeklyData.windspeed = (sumWindspeed / numberOfDays).toFixed(2);
+                tempWeeklyData.relativeHumidity = (sumRelativeHumidity / numberOfDays).toFixed(2);
+            } else {
+                tempWeeklyData.solarRadiation = sumSolarRadiation.toFixed(2);
+                tempWeeklyData.temperatureMax = sumTemperatureMax.toFixed(2);
+                tempWeeklyData.temperatureMin = sumTemperatureMin.toFixed(2);
+                tempWeeklyData.rainfall = sumRainfall.toFixed(2);
+                tempWeeklyData.windspeed = sumWindspeed.toFixed(2);
+                tempWeeklyData.relativeHumidity = sumRelativeHumidity.toFixed(2);
+            }
 
             weeklyData.push(tempWeeklyData);
 
@@ -173,41 +175,16 @@ function calculateMonthly(filename: string, rainfallList: any) {
             numberOfDays = 0;
             currMonth = nextMonth;
         }
-    } else {
-        const tempWeeklyData: any = {};
-            tempWeeklyData.month = currMonth;
-            // tempWeeklyData.weekDay = rainfallList[i].date;
-            tempWeeklyData.latitude = rainfallList[i].latitude;
-            tempWeeklyData.longitude = rainfallList[i].longitude;
-
-            tempWeeklyData.solarRadiation = (sumSolarRadiation / numberOfDays).toFixed(2);
-            tempWeeklyData.temperatureMax = (sumTemperatureMax / numberOfDays).toFixed(2);
-            tempWeeklyData.temperatureMin = (sumTemperatureMin / numberOfDays).toFixed(2);
-            tempWeeklyData.rainfall = (sumRainfall / numberOfDays).toFixed(2);
-            tempWeeklyData.windspeed = (sumWindspeed / numberOfDays).toFixed(2);
-            tempWeeklyData.relativeHumidity = (sumRelativeHumidity / numberOfDays).toFixed(2);
-
-            weeklyData.push(tempWeeklyData);
-
-            sumSolarRadiation = 0;
-            sumTemperatureMax = 0;
-            sumTemperatureMin = 0;
-            sumRainfall = 0;
-            sumWindspeed = 0;
-            sumRelativeHumidity = 0;
-
-            numberOfDays = 0;
-            currMonth = nextMonth;
     }
 
-  }
-
-  // console.log(weeklyData);
-
-  writeToCSV(weeklyData, './' + filename + '_monthly.csv');
+    if (isAvgRequired) {
+        writeToCSV(weeklyData, './' + filename + '_avg_monthly.csv');
+    } else {
+        writeToCSV(weeklyData, './' + filename + '_sum_monthly.csv');
+    }
 }
 
-function calculateWeekly(filename: string, rainfallList: any) {
+function calculateWeekly(filename: string, rainfallList: any, isAvgRequired: boolean) {
     const weeklyData: any = [];
     let sumSolarRadiation = 0;
     let sumTemperatureMin = 0;
@@ -218,105 +195,91 @@ function calculateWeekly(filename: string, rainfallList: any) {
 
     const year = rainfallList[0].date.substring(0, 4);
 
-  for (let i = 0; i < rainfallList.length; i++) {
-    sumSolarRadiation += rainfallList[i].solarRadiation;
-    sumTemperatureMax += rainfallList[i].temperatureMax;
-    sumTemperatureMin += rainfallList[i].temperatureMin;
-    sumRainfall += rainfallList[i].rainfall;
-    sumWindspeed += rainfallList[i].windspeed;
-    sumRelativeHumidity += rainfallList[i].relativeHumidity;
+    for (let i = 0; i < rainfallList.length; i++) {
+        sumSolarRadiation += rainfallList[i].solarRadiation;
+        sumTemperatureMax += rainfallList[i].temperatureMax;
+        sumTemperatureMin += rainfallList[i].temperatureMin;
+        sumRainfall += rainfallList[i].rainfall;
+        sumWindspeed += rainfallList[i].windspeed;
+        sumRelativeHumidity += rainfallList[i].relativeHumidity;
 
-    if (i !== 0 && (i + 1) % 7 === 0) {
-        const tempWeeklyData: any = {};
-        tempWeeklyData.week = (i + 1) / 7;
-        // tempWeeklyData.weekDay = rainfallList[i].date;
-        tempWeeklyData.latitude = rainfallList[i].latitude;
-        tempWeeklyData.longitude = rainfallList[i].longitude;
+        if (i !== 0 && (i + 1) % 7 === 0) {
+            const tempWeeklyData: any = {};
+            tempWeeklyData.week = (i + 1) / 7;
+            tempWeeklyData.latitude = rainfallList[i].latitude;
+            tempWeeklyData.longitude = rainfallList[i].longitude;
 
-        tempWeeklyData.solarRadiation = (sumSolarRadiation / 7).toFixed(2);
-        tempWeeklyData.temperatureMax = (sumTemperatureMax / 7).toFixed(2);
-        tempWeeklyData.temperatureMin = (sumTemperatureMin / 7).toFixed(2);
-        tempWeeklyData.rainfall = (sumRainfall / 7).toFixed(2);
-        tempWeeklyData.windspeed = (sumWindspeed / 7).toFixed(2);
-        tempWeeklyData.relativeHumidity = (sumRelativeHumidity / 7).toFixed(2);
+            if (isAvgRequired) {
+                tempWeeklyData.solarRadiation = (sumSolarRadiation / 7).toFixed(2);
+                tempWeeklyData.temperatureMax = (sumTemperatureMax / 7).toFixed(2);
+                tempWeeklyData.temperatureMin = (sumTemperatureMin / 7).toFixed(2);
+                tempWeeklyData.rainfall = (sumRainfall / 7).toFixed(2);
+                tempWeeklyData.windspeed = (sumWindspeed / 7).toFixed(2);
+                tempWeeklyData.relativeHumidity = (sumRelativeHumidity / 7).toFixed(2);
+            } else {
+                tempWeeklyData.solarRadiation = sumSolarRadiation.toFixed(2);
+                tempWeeklyData.temperatureMax = sumTemperatureMax.toFixed(2);
+                tempWeeklyData.temperatureMin = sumTemperatureMin.toFixed(2);
+                tempWeeklyData.rainfall = sumRainfall.toFixed(2);
+                tempWeeklyData.windspeed = sumWindspeed.toFixed(2);
+                tempWeeklyData.relativeHumidity = sumRelativeHumidity.toFixed(2);
+            }
 
-        weeklyData.push(tempWeeklyData);
+            weeklyData.push(tempWeeklyData);
 
-        sumSolarRadiation = 0;
-        sumTemperatureMax = 0;
-        sumTemperatureMin = 0;
-        sumRainfall = 0;
-        sumWindspeed = 0;
-        sumRelativeHumidity = 0;
+            sumSolarRadiation = 0;
+            sumTemperatureMax = 0;
+            sumTemperatureMin = 0;
+            sumRainfall = 0;
+            sumWindspeed = 0;
+            sumRelativeHumidity = 0;
+        }
     }
-  }
 
-  // console.log(weeklyData);
-
-  /*
-  const jsonString = JSON.stringify(weeklyData);
-
-  fs.writeFile('./weekly.json', jsonString, function(err) {
-    if(err) {
-        return console.log(err);
+    if (isAvgRequired) {
+        writeToCSV(weeklyData, './' + filename + '_avg_weekly.csv');
+    } else {
+        writeToCSV(weeklyData, './' + filename + '_sum_weekly.csv');
     }
-    console.log('The file was saved!');
-  });
-  */
-
-  writeToCSV(weeklyData, './' + filename + '_weekly.csv');
 }
 
 function writeToCSV(contents: any, filename: string) {
-  const items = contents;
-  const replacer = (key, value) => (value === null ? "" : value); // specify how you want to handle null values here
-  const header = Object.keys(items[0]);
-  let csv = items.map(row =>
-    header.map(fieldName => JSON.stringify(row[fieldName], replacer)).join(",")
+  const replacer = (key: string, value: any) => (value === null ? '' : value); // specify how you want to handle null values here
+  const header = Object.keys(contents[0]);
+  let csv = contents.map(row =>
+    header.map(fieldName => JSON.stringify(row[fieldName], replacer)).join(',')
   );
-  csv.unshift(header.join(","));
-  csv = csv.join("\r\n");
+  csv.unshift(header.join(','));
+  csv = csv.join('\r\n');
 
-  writeToFile(filename, csv);
+  writeToFile(csv, filename);
 }
 
-function writeToFile(filename, content) {
-  fs.writeFile(filename, content, function(err) {
+function writeToFile(contents: any, filename: string) {
+  fs.writeFile(filename, contents, function(err) {
     if (err) {
       return console.log(err);
     }
     console.log(filename + ' is saved');
   });
 }
-/*
-function loadFile(filePath) {
-  var result = null;
-  var xmlhttp = new XMLHttpRequest();
-  xmlhttp.open("GET", filePath, false);
-  xmlhttp.send();
-  if (xmlhttp.status==200) {
-    result = xmlhttp.responseText;
-  }
-  return result;
-}
-*/
 
 try {
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
-  app.on("ready", createWindow);
+  app.on('ready', createWindow);
 
   // Quit when all windows are closed.
-  app.on("window-all-closed", () => {
+  app.on('window-all-closed', () => {
     // On OS X it is common for applications and their menu bar
     // to stay active until the user quits explicitly with Cmd + Q
-    if (process.platform !== "darwin") {
+    if (process.platform !== 'darwin') {
       app.quit();
     }
   });
 
-  app.on("activate", () => {
+  app.on('activate', () => {
     // On OS X it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (win === null) {
