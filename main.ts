@@ -99,7 +99,7 @@ function onFileContent(filename, content) {
     rainfallList.push(rainFall);
   });
 
-  const isAvgRequired = false;
+  const isAvgRequired = true;
 
   calculateMonthly(filename, rainfallList, isAvgRequired);
   calculateWeekly(filename, rainfallList, isAvgRequired);
